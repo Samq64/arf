@@ -58,7 +58,7 @@ install_pkgs() {
             ;;
         PACMAN) pacman_pkgs+=("$pkg") ;;
         esac
-    done < <("$SCRIPT_DIR/resolve.py" "$@")
+    done < <("$SCRIPT_DIR/arf.py" "$@")
 
     if [[ ${#review_pkgs[@]} -gt 0 ]]; then
         printf "%s\n" "${review_pkgs[@]}" | fzf --header 'Review Build Scripts' \

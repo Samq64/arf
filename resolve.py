@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import re
 import requests
 import sys
@@ -119,14 +118,3 @@ def resolve(targets):
         "PACMAN": pacman_pkgs,
         "AUR": aur_order
     }
-
-
-def main():
-    pkgs = resolve(sys.argv[1:])
-    for label, group in pkgs.items():
-        for pkg in group:
-            print(f"{label} {pkg}")
-
-
-if __name__ == "__main__":
-    main()
