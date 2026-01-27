@@ -1,56 +1,29 @@
-import re
 import requests
 import sys
-from pycman.config import PacmanConfig
-from subprocess import run
-from time import time
+from srcinfo.parse import parse_srcinfo
 
 from config import ARF_CACHE, PKGS_DIR
+import aur
 import ui
+from pacman import localdb_has, syncdb_has
 
-DEP_PATTERN = re.compile(r"^\s*(?:check|make)?depends = ([\w\-.]+)")
 PKGS_DIR.mkdir(parents=True, exist_ok=True)
-MAX_AGE = 3600  # 1 hour
-
-alpm_handle = PacmanConfig('/etc/pacman.conf').initialize_alpm()
-localdb = alpm_handle.get_localdb()
-
-
-with open(f"{ARF_CACHE}/packages.txt", "r") as f:
-    AUR_PKGS = {line.strip() for line in f}
-
-
-def syncdb_has(pkg):
-    return any(db.search(f"^{pkg}$") for db in alpm_handle.get_syncdbs())
-
-
-def repo_is_fresh(repo):
-    f = repo / ".git" / "FETCH_HEAD"
-    if not f.exists():
-        f = repo / ".git" / "HEAD"
-    return time() - f.stat().st_mtime < MAX_AGE
+AUR_PKGS = aur.package_list()
 
 
 def fetch_dependencies(pkg):
-    repo = PKGS_DIR / pkg
+    aur.update_repo(pkg)
+    with open(PKGS_DIR / pkg / ".SRCINFO", "r") as f:
+        parsed, _ = parse_srcinfo(f.read())
 
-    if repo.is_dir():
-        if not repo_is_fresh(repo):
-            print(f"Pulling {pkg}...", file=sys.stderr)
-            run(["git", "pull", "-q", "--ff-only"], cwd=repo, check=True)
-    else:
-        if pkg not in AUR_PKGS:
-            raise RuntimeError(f"{pkg} is not an AUR package.")
+    deps = set()
+    deps.update(parsed.get("depends", []))
+    deps.update(parsed.get("makedepends", []))
 
-        print(f"Cloning {pkg}...", file=sys.stderr)
-        run(
-            ["git", "clone", "-q", f"https://aur.archlinux.org/{pkg}.git"],
-            cwd=PKGS_DIR,
-            check=True,
-        )
-
-    with open(repo / ".SRCINFO", "r") as f:
-        return [m.group(1) for line in f if (m := DEP_PATTERN.match(line))]
+    # TODO: Proper split package support
+    for package in parsed.get("packages", {}).values():
+        deps.update(package.get("depends", []))
+    return deps
 
 
 def aur_provider(pkg_name):
@@ -95,7 +68,7 @@ def resolve(targets):
         resolving.add(pkg)
 
         for dep in fetch_dependencies(pkg):
-            if localdb.search(f"^{dep}$") or dep in resolved:
+            if localdb_has(f"^{dep}$") or dep in resolved:
                 continue
 
             if syncdb_has(dep):
