@@ -24,3 +24,8 @@ def foreign_pkgs():
         for pkg in localdb.pkgcache
         if pkg.name not in repo_pkgs
     ]
+
+
+def local_pkg_prop(pkg_name, prop):
+    pkg_obj = localdb.get_pkg(pkg_name)
+    return getattr(pkg_obj, prop)
