@@ -17,4 +17,4 @@ dependencies = [
 ]
 
 [project.scripts]
-arf = "arf.main:main"
+arf = "arf.cli:main"
