@@ -15,9 +15,7 @@ def add_aur_group(parser):
 
 
 def parse_args():
-    parser = ArgumentParser(
-        prog="arf", description="Arf: an fzf Pacman wrapper and AUR helper"
-    )
+    parser = ArgumentParser(prog="arf", description="Arf: an fzf Pacman wrapper and AUR helper")
     subparsers = parser.add_subparsers(dest="command")
 
     install = subparsers.add_parser(
@@ -25,16 +23,12 @@ def parse_args():
         aliases=["i"],
         help="Install packages (default, interactive if none specified)",
     )
-    install.add_argument(
-        "packages", nargs="*", help="Packages to install (opens fzf if omitted)"
-    )
+    install.add_argument("packages", nargs="*", help="Packages to install (opens fzf if omitted)")
     add_aur_group(install)
     install.add_argument("--makepkg-flags", help="A string of flags to pass to makepkg")
     install.set_defaults(func=cmd_install)
 
-    update = subparsers.add_parser(
-        "update", aliases=["u"], help="Update system and AUR packages"
-    )
+    update = subparsers.add_parser("update", aliases=["u"], help="Update system and AUR packages")
     add_aur_group(update)
     update.add_argument(
         "-d",
@@ -47,14 +41,10 @@ def parse_args():
     remove = subparsers.add_parser(
         "remove", aliases=["r"], help="Remove packages (interactive if none specified)"
     )
-    remove.add_argument(
-        "packages", nargs="*", help="Packages to remove (opens fzf if omitted)"
-    )
+    remove.add_argument("packages", nargs="*", help="Packages to remove (opens fzf if omitted)")
     remove.set_defaults(func=cmd_remove)
 
-    clean = subparsers.add_parser(
-        "clean", aliases=["c"], help="Remove orphans and clean cache"
-    )
+    clean = subparsers.add_parser("clean", aliases=["c"], help="Remove orphans and clean cache")
     clean.set_defaults(func=cmd_clean)
 
     sync = subparsers.add_parser("sync", aliases=["s"], help="Refresh AUR metadata")
