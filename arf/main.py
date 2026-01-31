@@ -1,7 +1,11 @@
+import shutil
 import subprocess
-from arf import ui
+from arf import aur, ui
 from arf.alpm import Alpm
-from arf.config import PACMAN_AUTH
+from arf.config import PACMAN_AUTH, ARF_CACHE
+from pathlib import Path
+
+alpm = Alpm()
 
 
 def cmd_install(args):
@@ -16,7 +20,6 @@ def cmd_remove(args):
     if args.packages:
         packages = args.packages
     else:
-        alpm = Alpm()
         items = alpm.explicitly_installed()
         packages = ui.select(
             items,
@@ -28,8 +31,22 @@ def cmd_remove(args):
 
 
 def cmd_clean(args):
-    print(f"Clean: {args}")
+    orphans = alpm.orphans()
+    if orphans:
+        subprocess.run([PACMAN_AUTH, "pacman", "-Rns", *orphans])
+
+    pkgs_dir = Path(ARF_CACHE / "pkgbuild")
+    if not pkgs_dir.is_dir():
+        return
+
+    foreign = alpm.foreign_pkgs()
+    for subdir in pkgs_dir.iterdir():
+        name = subdir.name
+        if name not in foreign:
+            print(f"Removing PKGBUILD directory for {name}")
+            shutil.rmtree(subdir)
 
 
 def cmd_sync(args):
-    print(f"Sync: {args}")
+    shutil.rmtree(f"{ARF_CACHE}/info", ignore_errors=True)
+    aur.download_package_list(force=True)

@@ -31,6 +31,15 @@ class Alpm:
 
         return [pkg.name for pkg in self.localdb.pkgcache if pkg.name not in repo_pkgs]
 
+    def orphans(self) -> list[str]:
+        return [
+            pkg.name
+            for pkg in self.localdb.pkgcache
+            if pkg.reason == pyalpm.PKG_REASON_DEPEND
+            and not pkg.compute_requiredby()
+            and not pkg.compute_optionalfor()
+        ]
+
     def local_pkg_prop(self, package: str, prop: str) -> Any:
         pkg_obj = self.localdb.get_pkg(package)
         if not pkg_obj:
