@@ -14,7 +14,7 @@ PKGS_DIR = CACHE_DIR / "pkgbuild"
 PKGS_DIR.mkdir(parents=True, exist_ok=True)
 MAX_AGE = 3600  # 1 hour
 
-alpm_handle = PacmanConfig('/etc/pacman.conf').initialize_alpm()
+alpm_handle = PacmanConfig("/etc/pacman.conf").initialize_alpm()
 localdb = alpm_handle.get_localdb()
 
 
@@ -33,20 +33,20 @@ def repo_is_fresh(repo):
     return time() - f.stat().st_mtime < MAX_AGE
 
 
-def fetch_dependencies(pkg):
-    repo = PKGS_DIR / pkg
+def fetch_dependencies(name):
+    repo = PKGS_DIR / name
 
     if repo.is_dir():
         if not repo_is_fresh(repo):
-            print(f"Pulling {pkg}...", file=sys.stderr)
+            print(f"Pulling {name}...", file=sys.stderr)
             run(["git", "pull", "-q", "--ff-only"], cwd=repo, check=True)
     else:
-        if pkg not in AUR_PKGS:
-            raise RuntimeError(f"{pkg} is not an AUR package.")
+        if name not in AUR_PKGS:
+            raise RuntimeError(f"{name} is not an AUR package.")
 
-        print(f"Cloning {pkg}...", file=sys.stderr)
+        print(f"Cloning {name}...", file=sys.stderr)
         run(
-            ["git", "clone", "-q", f"https://aur.archlinux.org/{pkg}.git"],
+            ["git", "clone", "-q", f"https://aur.archlinux.org/{name}.git"],
             cwd=PKGS_DIR,
             check=True,
         )
@@ -122,10 +122,7 @@ def resolve(targets):
     for pkg in targets:
         visit(pkg)
 
-    return {
-        "PACMAN": pacman_pkgs,
-        "AUR": aur_order
-    }
+    return {"PACMAN": pacman_pkgs, "AUR": aur_order}
 
 
 def main():
