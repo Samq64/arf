@@ -9,6 +9,7 @@ from subprocess import run
 from time import time
 
 DEP_PATTERN = re.compile(r"^\s*(?:check|make)?depends = ([\w\-.]+)")
+SCRIPTS_DIR = Path(getenv("ARF_SCRIPTS", "."))
 CACHE_DIR = Path(getenv("ARF_CACHE", "~/.cache/arf")).expanduser()
 PKGS_DIR = CACHE_DIR / "pkgbuild"
 PKGS_DIR.mkdir(parents=True, exist_ok=True)
@@ -22,8 +23,21 @@ with open(f"{CACHE_DIR}/packages.txt", "r") as f:
     AUR_PKGS = {line.strip() for line in f}
 
 
-def syncdb_has(pkg):
-    return any(db.search(f"^{pkg}$") for db in alpm_handle.get_syncdbs())
+def syncdb_providers(pkg):
+    return sorted(
+        {
+            match.name
+            for db in alpm_handle.get_syncdbs()
+            for match in db.search(f"^{pkg}$")
+        }
+    )
+
+
+def syncdb_get(name):
+    for db in alpm_handle.get_syncdbs():
+        if pkg := db.get_pkg(name):
+            return pkg
+    return None
 
 
 def repo_is_fresh(repo):
@@ -33,7 +47,14 @@ def repo_is_fresh(repo):
     return time() - f.stat().st_mtime < MAX_AGE
 
 
+def strip_versions(pkgs):
+    return [re.split(r"[<>=]", p, maxsplit=1)[0] for p in pkgs]
+
+
 def fetch_dependencies(name):
+    if pkg := syncdb_get(name):
+        return strip_versions(pkg.depends)
+
     repo = PKGS_DIR / name
 
     if repo.is_dir():
@@ -55,25 +76,32 @@ def fetch_dependencies(name):
         return [m.group(1) for line in f if (m := DEP_PATTERN.match(line))]
 
 
-def aur_provider(pkg_name):
-    if pkg_name in AUR_PKGS:
-        return pkg_name
+def get_provider(pkg_name):
+    repo_providers = syncdb_providers(pkg_name)
+    if repo_providers:
+        providers = repo_providers
+    else:
+        r = requests.get(
+            "https://aur.archlinux.org/rpc/v5/search",
+            params={"by": "provides", "arg": pkg_name},
+            timeout=10,
+        )
+        r.raise_for_status()
+        providers = [p["Name"] for p in r.json().get("results", [])]
+        if not providers:
+            return None
 
-    r = requests.get(
-        "https://aur.archlinux.org/rpc/v5/search",
-        params={"by": "provides", "arg": pkg_name},
-        timeout=10,
-    )
-    r.raise_for_status()
-
-    providers = [p["Name"] for p in r.json().get("results", [])]
-    if not providers:
-        return None
     if len(providers) == 1:
         return providers[0]
 
     result = run(
-        ["fzf", "--header", f"Select a package to provide {pkg_name}"],
+        [
+            "fzf",
+            "--header",
+            f"Select provider for {pkg_name}",
+            "--preview",
+            f"{SCRIPTS_DIR}/pkg-preview.sh {{}}",
+        ],
         input="\n".join(providers),
         text=True,
         capture_output=True,
@@ -95,29 +123,23 @@ def resolve(targets):
             print(f"WARNING: Dependency cycle detected for {pkg}", file=sys.stderr)
             return
 
-        if syncdb_has(pkg):
-            pacman_pkgs.add(pkg)
-            resolved.add(pkg)
-            return
-
         resolving.add(pkg)
 
         for dep in fetch_dependencies(pkg):
             if localdb.search(f"^{dep}$") or dep in resolved:
                 continue
 
-            if syncdb_has(dep):
-                pacman_pkgs.add(dep)
-                continue
-
-            provider = aur_provider(dep)
+            provider = get_provider(dep)
             if not provider:
                 raise RuntimeError(f"Unsatisfied dependency: {dep}")
             visit(provider)
 
         resolving.remove(pkg)
         resolved.add(pkg)
-        aur_order.append(pkg)
+        if pkg in AUR_PKGS:
+            aur_order.append(pkg)
+        else:
+            pacman_pkgs.add(pkg)
 
     for pkg in targets:
         visit(pkg)
