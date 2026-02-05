@@ -14,9 +14,9 @@ readonly YELLOW=$(tput setaf 3 || echo '')
 readonly RESET=$(tput sgr0 || echo '')
 
 if [[ $0 == *.sh ]]; then
-    SCRIPT_DIR=$(realpath "$(dirname "$0")")
+    export ARF_SCRIPTS=$(realpath "$(dirname "$0")")
 else
-    SCRIPT_DIR=/usr/lib/arf
+    export ARF_SCRIPTS=/usr/lib/arf
 fi
 
 download_aur_list() {
@@ -58,13 +58,13 @@ install_pkgs() {
             ;;
         PACMAN) pacman_pkgs+=("$pkg") ;;
         esac
-    done < <("$SCRIPT_DIR/resolve.py" "$@")
+    done < <("$ARF_SCRIPTS/resolve.py" "$@")
 
     if [[ ${#review_pkgs[@]} -gt 0 ]]; then
         printf "%s\n" "${review_pkgs[@]}" | fzf --header 'Review Build Scripts' \
             --footer 'Ctrl+e: Edit PKGBUILD' \
             --bind "ctrl-e:execute($EDITOR $PKGS_DIR/{1}/PKGBUILD)+refresh-preview" \
-            --preview "$SCRIPT_DIR/diff-preview.sh {1}" >/dev/null
+            --preview "$ARF_SCRIPTS/diff-preview.sh {1}" >/dev/null
     fi
 
     if [[ ${#pacman_pkgs[@]} -gt 0 ]]; then
@@ -93,7 +93,7 @@ select_pkgs() {
     mapfile -t pkgs < <(
         echo "$list" | awk '!seen[$0]++' |
             fzf --multi --header 'Select packages to install' \
-                --preview "$SCRIPT_DIR/pkg-preview.sh {1}"
+                --preview "$ARF_SCRIPTS/pkg-preview.sh {1}"
     )
 
     [[ ${#pkgs[@]} -eq 0 ]] && return
@@ -134,7 +134,7 @@ update_pkgs() {
 
     local selected
     mapfile -t selected < <(printf "%s\n" "${updates[@]}" | fzf --multi \
-        --preview "$SCRIPT_DIR/diff-preview.sh {1}" \
+        --preview "$ARF_SCRIPTS/diff-preview.sh {1}" \
         --header 'Select AUR packages to update' --bind 'load:select-all')
     install_pkgs --skip-review "${selected[@]}"
 }
