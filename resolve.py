@@ -79,6 +79,7 @@ def fetch_dependencies(name):
 def get_provider(pkg_name):
     repo_providers = syncdb_providers(pkg_name)
     if repo_providers:
+        # TODO: package group multi-select
         providers = repo_providers
     else:
         r = requests.get(
@@ -125,21 +126,20 @@ def resolve(targets):
 
         resolving.add(pkg)
 
-        for dep in fetch_dependencies(pkg):
-            if localdb.search(f"^{dep}$") or dep in resolved:
-                continue
+        provider = get_provider(pkg)
+        if not provider:
+            raise RuntimeError(f"ERROR: Could not satisfy {pkg}")
 
-            provider = get_provider(dep)
-            if not provider:
-                raise RuntimeError(f"Unsatisfied dependency: {dep}")
-            visit(provider)
+        for dep in fetch_dependencies(provider):
+            if not localdb.search(f"^{dep}$"):
+                visit(dep)
 
         resolving.remove(pkg)
         resolved.add(pkg)
         if pkg in AUR_PKGS:
-            aur_order.append(pkg)
+            aur_order.append(provider)
         else:
-            pacman_pkgs.add(pkg)
+            pacman_pkgs.add(provider)
 
     for pkg in targets:
         visit(pkg)
