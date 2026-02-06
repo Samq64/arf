@@ -24,13 +24,38 @@ with open(f"{CACHE_DIR}/packages.txt", "r") as f:
 
 
 def syncdb_providers(pkg):
-    return sorted(
-        {
-            match.name
-            for db in alpm_handle.get_syncdbs()
-            for match in db.search(f"^{pkg}$")
-        }
+    return {
+        match.name
+        for db in alpm_handle.get_syncdbs()
+        for match in db.search(f"^{pkg}$")
+    }
+
+
+def group_prompt(name, members):
+    result = run(
+        [
+            "fzf",
+            "--multi",
+            "--header",
+            f"Select packages from group {name}",
+            "--preview",
+            f"{SCRIPTS_DIR}/pkg-preview.sh {{}}",
+            "--bind",
+            "load:select-all",
+        ],
+        input="\n".join(members),
+        text=True,
+        capture_output=True,
     )
+    return result.stdout.strip().splitlines()
+
+
+def get_group(name):
+    for db in alpm_handle.get_syncdbs():
+        if group := db.read_grp(name):
+            _, packages = group
+            return group_prompt(name, [pkg.name for pkg in packages])
+    return None
 
 
 def syncdb_get(name):
@@ -79,8 +104,7 @@ def fetch_dependencies(name):
 def get_provider(pkg_name):
     repo_providers = syncdb_providers(pkg_name)
     if repo_providers:
-        # TODO: package group multi-select
-        providers = repo_providers
+        providers = sorted(repo_providers)
     else:
         r = requests.get(
             "https://aur.archlinux.org/rpc/v5/search",
@@ -126,9 +150,19 @@ def resolve(targets):
 
         resolving.add(pkg)
 
-        provider = get_provider(pkg)
-        if not provider:
-            raise RuntimeError(f"ERROR: Could not satisfy {pkg}")
+        if group_pkgs := get_group(pkg):
+            for member in group_pkgs:
+                visit(member)
+            resolving.remove(pkg)
+            resolved.add(pkg)
+            return
+
+        if syncdb_get(pkg):
+            provider = pkg
+        else:
+            provider = get_provider(pkg)
+            if not provider:
+                raise RuntimeError(f"ERROR: Could not satisfy {pkg}")
 
         for dep in fetch_dependencies(provider):
             if not localdb.search(f"^{dep}$"):
