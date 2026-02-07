@@ -23,11 +23,12 @@ with open(f"{CACHE_DIR}/packages.txt", "r") as f:
     AUR_PKGS = {line.strip() for line in f}
 
 
-def syncdb_providers(pkg):
+def syncdb_providers(pkg_name):
     return {
-        match.name
+        pkg.name
         for db in alpm_handle.get_syncdbs()
-        for match in db.search(f"^{pkg}$")
+        for pkg in db.search(pkg_name)
+        if any(p.split("=")[0] == pkg_name for p in pkg.provides)
     }
 
 
@@ -72,13 +73,9 @@ def repo_is_fresh(repo):
     return time() - f.stat().st_mtime < MAX_AGE
 
 
-def strip_versions(pkgs):
-    return [re.split(r"[<>=]", p, maxsplit=1)[0] for p in pkgs]
-
-
 def fetch_dependencies(name):
     if pkg := syncdb_get(name):
-        return strip_versions(pkg.depends)
+        return pkg.depends
 
     repo = PKGS_DIR / name
 
@@ -106,6 +103,8 @@ def get_provider(pkg_name):
     if repo_providers:
         providers = sorted(repo_providers)
     else:
+        if pkg_name in AUR_PKGS:
+            return pkg_name
         r = requests.get(
             "https://aur.archlinux.org/rpc/v5/search",
             params={"by": "provides", "arg": pkg_name},
@@ -141,7 +140,12 @@ def resolve(targets):
     aur_order = []
 
     def visit(pkg):
+        pkg = re.split(r"[<>=]", pkg, maxsplit=1)[0]
         if pkg in resolved:
+            return
+
+        if localdb.search(f"^{pkg}$"):
+            resolved.add(pkg)
             return
 
         if pkg in resolving:
