@@ -62,10 +62,10 @@ def provider_prompt(name: str, providers: list[str]) -> str:
     return select_one(providers, f"Select provider for {name}", preview="package.sh")
 
 
-def review_prompt(packsges):
+def review_prompt(packages):
     preview_cmd = f"{EDITOR} {PKGS_DIR}/{{}}/PKGBUILD"
     selected = select_one(
-        packsges,
+        packages,
         "Review build scripts",
         preview="diff.sh",
         footer="Ctrl+e: Edit PKGBUILD",
