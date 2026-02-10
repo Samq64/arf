@@ -9,10 +9,10 @@ from subprocess import run
 _seen_repos = set()
 
 
-def search_rpc(query: str, by: str = "name") -> list[dict]:
+def search_rpc(query: str, by: str = "name", type: str = "search") -> list[dict]:
     try:
         response = requests.get(
-            "https://aur.archlinux.org/rpc/v5/search",
+            f"https://aur.archlinux.org/rpc/v5/{type}",
             params={"by": by, "arg": query},
             timeout=10,
         )
