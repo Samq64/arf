@@ -42,6 +42,7 @@ def get_provider(pkg_name, select_provider):
 
     return select_provider(pkg_name, providers)
 
+
 def resolve(targets, select_provider, select_group):
     resolved = set()
     resolving = set()
@@ -53,10 +54,6 @@ def resolve(targets, select_provider, select_group):
     def visit(pkg, dependency=False):
         pkg = strip_version(pkg)
         if pkg in resolved:
-            return
-
-        if alpm.is_installed(pkg):
-            resolved.add(pkg)
             return
 
         if pkg in resolving:
@@ -85,7 +82,8 @@ def resolve(targets, select_provider, select_group):
                 provider_cache[pkg] = provider
 
         for dep in deps_cache.setdefault(provider, fetch_dependencies(provider)):
-            visit(dep, dependency=True)
+            if not alpm.is_installed(pkg):
+                visit(dep, dependency=True)
 
         resolving.remove(pkg)
         resolved.add(pkg)

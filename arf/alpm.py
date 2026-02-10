@@ -54,3 +54,6 @@ class Alpm:
             if pkg := db.get_pkg(name):
                 return pkg
         return None
+
+    def get_local_package(self, name: str) -> pyalpm.Package | None:
+        return self.localdb.get_pkg(name)
