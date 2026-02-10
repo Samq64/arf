@@ -33,3 +33,14 @@ def select(
 def select_one(items: list[str], header: str, preview: str = "") -> str | None:
     result = select(items, header, preview=preview, multi=False)
     return result[0] if result else None
+
+def group_prompt(name: str, members: list[str]) -> list[str]:
+    return select(
+        members,
+        f"Select from group {name}",
+        preview="package.sh",
+        all=True,
+    )
+
+def provider_prompt(name: str, providers: list[str]) -> str:
+    return select_one(providers, f"Select provider for {name}", preview="package.sh")

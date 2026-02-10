@@ -1,10 +1,13 @@
 import gzip
 import requests
-from arf.config import ARF_CACHE, MAX_CACHE_AGE
+from arf.config import ARF_CACHE
+from functools import cache
 from io import BytesIO
 from pathlib import Path
-from time import time
 from subprocess import run
+
+_seen_repos = set()
+
 
 def search_rpc(query: str, by: str = "name") -> list[dict]:
     try:
@@ -22,7 +25,7 @@ def search_rpc(query: str, by: str = "name") -> list[dict]:
 
 def download_package_list(force: bool = False) -> Path:
     file_path = Path(ARF_CACHE / "packages.txt")
-    if not file_path.exists() or force or (time() - file_path.stat().st_mtime > MAX_CACHE_AGE):
+    if not file_path.exists() or force:
         ARF_CACHE.mkdir(parents=True, exist_ok=True)
         print("Downloading AUR package list...")
         response = requests.get("https://aur.archlinux.org/packages.gz", timeout=10)
@@ -33,36 +36,33 @@ def download_package_list(force: bool = False) -> Path:
     return file_path
 
 
+@cache
 def package_list() -> set[str]:
     file_path = download_package_list()
     with open(file_path, "r") as f:
         return {line.strip() for line in f}
 
 
-def repo_is_fresh(repo: Path, max_age: int = MAX_CACHE_AGE) -> bool:
-    f = repo / ".git" / "FETCH_HEAD"
-    if not f.exists():
-        f = repo / ".git" / "HEAD"
-    return time() - f.stat().st_mtime < max_age
-
-
 def get_repo(pkg_name: str) -> Path:
     pkgs_dir = ARF_CACHE / "pkgbuild"
-    pkgs_dir.mkdir(parents=True, exist_ok=True)
     repo = pkgs_dir / pkg_name
 
+    if pkg_name in _seen_repos:
+        return repo
+
     if repo.is_dir():
-        if not repo_is_fresh(repo):
-            print(f"Pulling {pkg_name}...")
-            run(["git", "pull", "-q", "--ff-only"], cwd=repo, check=True)
+        print(f"Pulling {pkg_name}...")
+        run(["git", "pull", "-q", "--ff-only"], cwd=repo, check=True)
     else:
+        pkgs_dir.mkdir(parents=True, exist_ok=True)
         if pkg_name not in package_list():
             raise RuntimeError(f"{pkg_name} is not an AUR package.")
 
         print(f"Cloning {pkg_name}...")
         run(
             ["git", "clone", "-q", f"https://aur.archlinux.org/{pkg_name}.git"],
-            cwd=str(ARF_CACHE / "pkgbuild"),
+            cwd=pkgs_dir,
             check=True,
         )
+    _seen_repos.add(pkg_name)
     return repo

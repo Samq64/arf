@@ -7,4 +7,3 @@ EDITOR = environ.get("EDITOR", "nano")
 PACMAN_AUTH = environ.get("PACMAN_AUTH", "sudo")
 DEFAULT_FZF_CMD = ["fzf", "--reverse", "--header-first", "--preview-window=75%"]
 PREVIEW_SCRIPTS = files("arf").joinpath("previews")
-MAX_CACHE_AGE = 3600 # 1 hour

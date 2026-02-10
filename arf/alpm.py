@@ -37,20 +37,20 @@ class Alpm:
     def get_providers(self, name: str) -> set[str]:
         return {
             pkg.name
-            for db in self.handle.get_syncdbs()
+            for db in self.syncdbs
             for pkg in db.search(name)
             if any(p.split("=")[0] == name for p in pkg.provides)
         }
 
     def get_group(self, name: str) -> set[str] | None:
-        for db in self.handle.get_syncdbs():
+        for db in self.syncdbs:
             if group := db.read_grp(name):
                 _, packages = group
                 return {pkg.name for pkg in packages}
         return None
 
     def get_sync_package(self, name: str) -> pyalpm.Package | None:
-        for db in self.handle.get_syncdbs():
+        for db in self.syncdbs:
             if pkg := db.get_pkg(name):
                 return pkg
         return None

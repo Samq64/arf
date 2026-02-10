@@ -1,6 +1,6 @@
 import re
 import sys
-from arf import aur, ui
+from arf import fetch, ui
 from arf.alpm import Alpm
 from srcinfo.parse import parse_srcinfo
 
@@ -15,7 +15,7 @@ def fetch_dependencies(name):
     if pkg := alpm.get_sync_package(name):
         return pkg.depends
 
-    repo = aur.get_repo(name)
+    repo = fetch.get_repo(name)
     with open(repo / ".SRCINFO", "r") as f:
         parsed, _ = parse_srcinfo(f.read())
         deps = set(parsed.get("depends", []) + parsed.get("makedepends", []))
@@ -25,14 +25,14 @@ def fetch_dependencies(name):
         return deps
 
 
-def get_provider(pkg_name):
+def get_provider(pkg_name, select_provider):
     repo_providers = alpm.get_providers(pkg_name)
     if repo_providers:
         providers = sorted(repo_providers)
     else:
-        if pkg_name in aur.package_list():
+        if pkg_name in fetch.package_list():
             return pkg_name
-        response = aur.search_rpc(pkg_name, by="provides")
+        response = fetch.search_rpc(pkg_name, by="provides")
         providers = sorted({p["Name"] for p in response})
         if not providers:
             return None
@@ -40,10 +40,9 @@ def get_provider(pkg_name):
     if len(providers) == 1:
         return providers[0]
 
-    return ui.select_one(providers, f"Select provider for {pkg_name}", preview="package.sh")
+    return select_provider(pkg_name, providers)
 
-
-def resolve(targets):
+def resolve(targets, select_provider, select_group):
     resolved = set()
     resolving = set()
     pacman_pkgs = set()
@@ -67,12 +66,7 @@ def resolve(targets):
         resolving.add(pkg)
 
         if group_pkgs := alpm.get_group(pkg):
-            selected = ui.select(
-                group_pkgs,
-                f"Select from group {pkg}",
-                preview="package.sh",
-                all=True,
-            )
+            selected = select_group(pkg, group_pkgs)
             for member in selected:
                 visit(member)
             resolving.remove(pkg)
@@ -85,18 +79,17 @@ def resolve(targets):
             if pkg in provider_cache:
                 provider = provider_cache[pkg]
             else:
-                provider = get_provider(pkg)
+                provider = get_provider(pkg, select_provider)
                 if not provider:
                     raise RuntimeError(f"ERROR: Could not satisfy {pkg}")
                 provider_cache[pkg] = provider
-
 
         for dep in deps_cache.setdefault(provider, fetch_dependencies(provider)):
             visit(dep)
 
         resolving.remove(pkg)
         resolved.add(pkg)
-        if pkg in aur.package_list():
+        if pkg in fetch.package_list():
             aur_order.append(provider)
         else:
             pacman_pkgs.add(provider)

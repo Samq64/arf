@@ -1,8 +1,9 @@
 import shutil
 import subprocess
-from arf import aur, ui
+from arf import ui
 from arf.alpm import Alpm
 from arf.config import ARF_CACHE, PACMAN_AUTH
+from arf.fetch import download_package_list
 from arf.resolve import resolve
 from pathlib import Path
 
@@ -19,7 +20,7 @@ def cmd_install(args):
             "Select packages to install",
             preview="package.sh",
         )
-    resolved = resolve(packages)["PACMAN"]
+    resolved = resolve(packages, ui.provider_prompt, ui.group_prompt)["PACMAN"]
     if resolved:
         subprocess.run([PACMAN_AUTH, "pacman", "-S", "--needed", *resolved])
 
@@ -61,4 +62,4 @@ def cmd_clean(args):
 
 def cmd_sync(args):
     shutil.rmtree(f"{ARF_CACHE}/info", ignore_errors=True)
-    aur.download_package_list(force=True)
+    download_package_list(force=True)
