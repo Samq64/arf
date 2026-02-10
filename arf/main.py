@@ -17,7 +17,7 @@ def install_aur_package(pkg, flags):
     print(f"Installing {pkg['name']}...")
     makepkg_cmd = ["makepkg", "--install"]
     if pkg["dependency"]:
-        makepkg_cmd += ["-D", "--asdeps"]
+        makepkg_cmd.append("--asdeps")
     if flags:
         makepkg_cmd += flags
     subprocess.run(makepkg_cmd, cwd=get_repo(pkg["name"]), check=True)

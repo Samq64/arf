@@ -53,7 +53,7 @@ def resolve(targets, select_provider, select_group):
 
     def visit(pkg, dependency=False):
         pkg = strip_version(pkg)
-        if pkg in resolved:
+        if dependency and alpm.is_installed(pkg) or pkg in resolved:
             return
 
         if pkg in resolving:
@@ -82,8 +82,7 @@ def resolve(targets, select_provider, select_group):
                 provider_cache[pkg] = provider
 
         for dep in deps_cache.setdefault(provider, fetch_dependencies(provider)):
-            if not alpm.is_installed(dep):
-                visit(dep, dependency=True)
+            visit(dep, dependency=True)
 
         resolving.remove(pkg)
         resolved.add(pkg)
