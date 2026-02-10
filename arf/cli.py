@@ -1,3 +1,4 @@
+import sys
 from argparse import ArgumentParser
 from arf.main import (
     cmd_install,
@@ -50,15 +51,11 @@ def parse_args():
     sync = subparsers.add_parser("sync", aliases=["s"], help="Refresh AUR metadata")
     sync.set_defaults(func=cmd_sync)
 
-    return parser.parse_args()
+    return parser.parse_args(["install"] if len(sys.argv) == 1 else None)
 
 
 def main():
     args = parse_args()
-    if args.command is None:
-        args.func = cmd_install
-        args.packages = []
-
     args.func(args)
 
 

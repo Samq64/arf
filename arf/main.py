@@ -1,43 +1,45 @@
+import shlex
 import shutil
 import subprocess
 from arf import ui
 from arf.alpm import Alpm
-from arf.config import ARF_CACHE, EDITOR, PACMAN_AUTH, PKGS_DIR
+from arf.config import ARF_CACHE, PACMAN_AUTH, PKGS_DIR
 from arf.fetch import download_package_list, get_repo, package_list
 from arf.resolve import resolve
+from pathlib import Path
 from pyalpm import vercmp
 from srcinfo.parse import parse_srcinfo
 
 alpm = Alpm()
 
 
-def install_packages(resolved_packages, makepkg_flags=None, skip=None):
-    pacman = resolved_packages["pacman"]
-    aur = resolved_packages["aur"]
-    pacman_deps = [pkg for pkg in resolved_packages["pacman"] if pkg["dependency"]]
-    needs_review = sorted({pkg["name"] for pkg in aur} - set(skip))
-    if needs_review:
-        preview_cmd = f"{EDITOR} {PKGS_DIR}/{{}}/PKGBUILD"
-        if not ui.select_one(
-            needs_review,
-            "Review build scripts",
-            preview="diff.sh",
-            footer="Ctrl+e: Edit PKGBUILD",
-            bind=f"ctrl-e:execute({preview_cmd})+refresh-preview",
-        ):
-            return
+def install_aur_package(pkg, flags):
+    print(f"Installing {pkg['name']}...")
+    makepkg_cmd = ["makepkg", "--install"]
+    if pkg["dependency"]:
+        makepkg_cmd += ["-D", "--asdeps"]
+    if flags:
+        makepkg_cmd += flags
+    subprocess.run(makepkg_cmd, cwd=get_repo(pkg["name"]), check=True)
+
+
+def install_packages(packages, makepkg_flags="", skip=None):
+    skip = skip or []
+    pacman, aur = resolve(packages, ui.provider_prompt, ui.group_prompt)
+    pacman_names = [p["name"] for p in pacman]
+    pacman_deps = [p["name"] for p in pacman if p.get("dependency")]
+    needs_review = sorted(p["name"] for p in aur if p["name"] not in skip)
+
+    if needs_review and not ui.review_prompt(needs_review):
+        return
+
     if pacman:
-        subprocess.run([PACMAN_AUTH, "pacman", "-S", "--needed", *pacman], check=True)
+        subprocess.run([PACMAN_AUTH, "pacman", "-S", "--needed", *pacman_names], check=True)
         subprocess.run([PACMAN_AUTH, "pacman", "-D", "--asdeps", *pacman_deps], check=True)
     if aur:
+        flags = shlex.split(makepkg_flags)
         for pkg in aur:
-            print(f"Installing {pkg['name']}...")
-            makepkg_cmd = ["makepkg", "--install"]
-            if pkg["dependency"]:
-                makepkg_cmd += ["-D", "--asdeps"]
-            if makepkg_flags:
-                makepkg_cmd += makepkg_flags.split(" ")
-            subprocess.run(makepkg_cmd, cwd=get_repo(pkg["name"]), check=True)
+            install_aur_package(pkg, flags)
 
 
 def cmd_install(args):
@@ -54,8 +56,7 @@ def cmd_install(args):
             "Select packages to install",
             preview="package.sh",
         )
-    resolved = resolve(packages, ui.provider_prompt, ui.group_prompt)
-    install_packages(resolved, makepkg_flags=args.makepkg_flags)
+    install_packages(packages, makepkg_flags=args.makepkg_flags)
 
 
 def cmd_update(args):
@@ -87,8 +88,7 @@ def cmd_update(args):
             return
 
         selected = ui.select(updates, "Select AUR packages to update", preview="diff.sh", all=True)
-        resolved = resolve(selected, ui.provider_prompt, ui.group_prompt)
-        install_packages(resolved, skip=selected)
+        install_packages(selected, skip=selected)
 
 
 def cmd_remove(args):
@@ -122,5 +122,5 @@ def cmd_clean(args):
 
 
 def cmd_sync(args):
-    shutil.rmtree(f"{ARF_CACHE}/info", ignore_errors=True)
+    shutil.rmtree(Path(ARF_CACHE) / "info", ignore_errors=True)
     download_package_list(force=True)

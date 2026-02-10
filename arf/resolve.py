@@ -82,7 +82,7 @@ def resolve(targets, select_provider, select_group):
                 provider_cache[pkg] = provider
 
         for dep in deps_cache.setdefault(provider, fetch_dependencies(provider)):
-            if not alpm.is_installed(pkg):
+            if not alpm.is_installed(dep):
                 visit(dep, dependency=True)
 
         resolving.remove(pkg)
@@ -95,4 +95,4 @@ def resolve(targets, select_provider, select_group):
     for pkg in targets:
         visit(pkg)
 
-    return {"pacman": pacman_pkgs, "aur": aur_order}
+    return (pacman_pkgs, aur_order)

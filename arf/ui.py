@@ -1,5 +1,5 @@
 import subprocess
-from arf.config import DEFAULT_FZF_CMD, PREVIEW_SCRIPTS, PKGS_DIR
+from arf.config import DEFAULT_FZF_CMD, EDITOR, PREVIEW_SCRIPTS, PKGS_DIR
 from os import environ
 
 
@@ -37,7 +37,7 @@ def select(
         input="\n".join(items),
         text=True,
         capture_output=True,
-        env=environ | {"PKGS_DIR": PKGS_DIR}
+        env=environ | {"PKGS_DIR": PKGS_DIR},
     )
     return proc.stdout.strip().splitlines()
 
@@ -60,3 +60,15 @@ def group_prompt(name: str, members: list[str]) -> list[str]:
 
 def provider_prompt(name: str, providers: list[str]) -> str:
     return select_one(providers, f"Select provider for {name}", preview="package.sh")
+
+
+def review_prompt(packsges):
+    preview_cmd = f"{EDITOR} {PKGS_DIR}/{{}}/PKGBUILD"
+    selected = select_one(
+        packsges,
+        "Review build scripts",
+        preview="diff.sh",
+        footer="Ctrl+e: Edit PKGBUILD",
+        bind=f"ctrl-e:execute({preview_cmd})+refresh-preview",
+    )
+    return selected is not None
