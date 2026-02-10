@@ -19,5 +19,8 @@ dependencies = [
 [project.scripts]
 arf = "arf.cli:main"
 
+[tool.setuptools.package-data]
+"arf" = ["previews/*.sh"]
+
 [tool.ruff]
 line-length = 100
