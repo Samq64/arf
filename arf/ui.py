@@ -1,8 +1,10 @@
 import subprocess
-from arf.config import DEFAULT_FZF_CMD
+from arf.config import DEFAULT_FZF_CMD, PREVIEW_SCRIPTS
 
 
-def select(items: list[str], header: str, preview: str = "", multi: bool = True) -> list[str]:
+def select(
+    items: list[str], header: str, preview: str = "", multi: bool = True, all: bool = False
+) -> list[str]:
     if not items:
         return []
 
@@ -10,10 +12,14 @@ def select(items: list[str], header: str, preview: str = "", multi: bool = True)
     args += ["--header", header]
     if multi:
         args.append("--multi")
+        if all:
+            args += ["--bind", "load:select-all"]
     if preview:
-        if "{}" not in preview:
-            preview += " {}"
-        args += ["--preview", preview]
+        preview_path = PREVIEW_SCRIPTS / preview
+        preview_cmd = str(preview_path) if preview_path.exists() else preview
+        if "{}" not in preview_cmd:
+            preview_cmd += " {}"
+        args += ["--preview", preview_cmd]
 
     proc = subprocess.run(
         args,

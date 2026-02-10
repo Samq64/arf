@@ -1,7 +1,6 @@
 import pyalpm
 from pycman.config import PacmanConfig
 from re import escape
-from typing import Any
 
 
 class Alpm:
@@ -10,38 +9,48 @@ class Alpm:
         self.localdb = self.handle.get_localdb()
         self.syncdbs = self.handle.get_syncdbs()
 
-    def in_repos(self, package: str) -> bool:
-        pattern = f"^{escape(package)}$"
-        return any(db.search(pattern) for db in self.syncdbs)
-
     def is_installed(self, package: str) -> bool:
         pattern = f"^{escape(package)}$"
         return bool(self.localdb.search(pattern))
 
-    def explicitly_installed(self) -> list[str]:
-        return [
+    def all_sync_packages(self) -> set[str]:
+        return {pkg.name for db in self.syncdbs for pkg in db.pkgcache}
+
+    def explicitly_installed(self) -> set[str]:
+        return {
             pkg.name for pkg in self.localdb.pkgcache if pkg.reason == pyalpm.PKG_REASON_EXPLICIT
-        ]
+        }
 
-    def foreign_pkgs(self) -> list[str]:
-        repo_pkgs = set()
-        for db in self.syncdbs:
-            for pkg in db.pkgcache:
-                repo_pkgs.add(pkg.name)
+    def foreign_packages(self) -> set[str]:
+        sync_packages = self.all_sync_packages()
+        return {pkg.name for pkg in self.localdb.pkgcache if pkg.name not in sync_packages}
 
-        return [pkg.name for pkg in self.localdb.pkgcache if pkg.name not in repo_pkgs]
-
-    def orphans(self) -> list[str]:
-        return [
+    def orphans(self) -> set[str]:
+        return {
             pkg.name
             for pkg in self.localdb.pkgcache
             if pkg.reason == pyalpm.PKG_REASON_DEPEND
             and not pkg.compute_requiredby()
             and not pkg.compute_optionalfor()
-        ]
+        }
 
-    def local_pkg_prop(self, package: str, prop: str) -> Any:
-        pkg_obj = self.localdb.get_pkg(package)
-        if not pkg_obj:
-            raise KeyError(package)
-        return getattr(pkg_obj, prop)
+    def get_providers(self, name: str) -> set[str]:
+        return {
+            pkg.name
+            for db in self.handle.get_syncdbs()
+            for pkg in db.search(name)
+            if any(p.split("=")[0] == name for p in pkg.provides)
+        }
+
+    def get_group(self, name: str) -> set[str] | None:
+        for db in self.handle.get_syncdbs():
+            if group := db.read_grp(name):
+                _, packages = group
+                return {pkg.name for pkg in packages}
+        return None
+
+    def get_sync_package(self, name: str) -> pyalpm.Package | None:
+        for db in self.handle.get_syncdbs():
+            if pkg := db.get_pkg(name):
+                return pkg
+        return None

@@ -2,14 +2,26 @@ import shutil
 import subprocess
 from arf import aur, ui
 from arf.alpm import Alpm
-from arf.config import PACMAN_AUTH, ARF_CACHE
+from arf.config import ARF_CACHE, PACMAN_AUTH
+from arf.resolve import resolve
 from pathlib import Path
 
 alpm = Alpm()
 
 
 def cmd_install(args):
-    print(f"Install: {args}")
+    if args.packages:
+        packages = args.packages
+    else:
+        items = sorted(alpm.all_sync_packages())
+        packages = ui.select(
+            items,
+            "Select packages to install",
+            preview="package.sh",
+        )
+    resolved = resolve(packages)["PACMAN"]
+    if resolved:
+        subprocess.run([PACMAN_AUTH, "pacman", "-S", "--needed", *resolved])
 
 
 def cmd_update(args):
@@ -20,7 +32,7 @@ def cmd_remove(args):
     if args.packages:
         packages = args.packages
     else:
-        items = alpm.explicitly_installed()
+        items = sorted(alpm.explicitly_installed())
         packages = ui.select(
             items,
             "Select packages to remove",
@@ -39,7 +51,7 @@ def cmd_clean(args):
     if not pkgs_dir.is_dir():
         return
 
-    foreign = alpm.foreign_pkgs()
+    foreign = alpm.foreign_packages()
     for subdir in pkgs_dir.iterdir():
         name = subdir.name
         if name not in foreign:
