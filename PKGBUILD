@@ -2,18 +2,18 @@
 
 _name=arf
 pkgname="${_name}-git"
-pkgver=r1.2807e62
+pkgver=r13.2cb27bd
 pkgrel=1
-pkgdesc="An fzf Pacman wrapper and AUR helper."
+pkgdesc="An fzf Pacman wrapper and AUR helper"
 arch=('any')
 url="https://github.com/Samq64/arf"
 license=('MIT')
-depends=('fzf' 'git' 'pyalpm' 'python' 'python-requests' 'python-srcinfo')
-makedepends=('python-build' 'python-installer' 'python-wheel')
+depends=('fzf' 'git' 'pacman' 'pyalpm' 'python' 'python-requests' 'python-srcinfo')
+makedepends=('python-build' 'python-installer' 'python-setuptools' 'python-wheel')
 optdepends=('sudo: default privilege elevation')
 provides=("$_name")
 conflicts=("$_name")
-source=('git+https://github.com/Samq64/arf.git#branch=rewrite')
+source=('git+https://github.com/Samq64/arf.git')
 sha256sums=('SKIP')
 
 pkgver() {
