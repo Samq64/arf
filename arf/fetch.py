@@ -1,6 +1,6 @@
 import gzip
 import requests
-from arf.config import ARF_CACHE
+from arf.config import ARF_CACHE, PKGS_DIR
 from functools import cache
 from io import BytesIO
 from pathlib import Path
@@ -44,8 +44,7 @@ def package_list() -> set[str]:
 
 
 def get_repo(pkg_name: str) -> Path:
-    pkgs_dir = ARF_CACHE / "pkgbuild"
-    repo = pkgs_dir / pkg_name
+    repo = PKGS_DIR / pkg_name
 
     if pkg_name in _seen_repos:
         return repo
@@ -54,14 +53,14 @@ def get_repo(pkg_name: str) -> Path:
         print(f"Pulling {pkg_name}...")
         run(["git", "pull", "-q", "--ff-only"], cwd=repo, check=True)
     else:
-        pkgs_dir.mkdir(parents=True, exist_ok=True)
+        PKGS_DIR.mkdir(parents=True, exist_ok=True)
         if pkg_name not in package_list():
             raise RuntimeError(f"{pkg_name} is not an AUR package.")
 
         print(f"Cloning {pkg_name}...")
         run(
             ["git", "clone", "-q", f"https://aur.archlinux.org/{pkg_name}.git"],
-            cwd=pkgs_dir,
+            cwd=PKGS_DIR,
             check=True,
         )
     _seen_repos.add(pkg_name)

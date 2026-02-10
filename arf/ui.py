@@ -1,15 +1,26 @@
 import subprocess
-from arf.config import DEFAULT_FZF_CMD, PREVIEW_SCRIPTS
+from arf.config import DEFAULT_FZF_CMD, PREVIEW_SCRIPTS, PKGS_DIR
+from os import environ
 
 
 def select(
-    items: list[str], header: str, preview: str = "", multi: bool = True, all: bool = False
+    items: list[str],
+    header: str,
+    footer: str = "",
+    preview: str = "",
+    bind: str = "",
+    multi: bool = True,
+    all: bool = False,
 ) -> list[str]:
     if not items:
         return []
 
     args = DEFAULT_FZF_CMD.copy()
     args += ["--header", header]
+    if footer:
+        args += ["--footer", footer]
+    if bind:
+        args += ["--bind", bind]
     if multi:
         args.append("--multi")
         if all:
@@ -26,13 +37,17 @@ def select(
         input="\n".join(items),
         text=True,
         capture_output=True,
+        env=environ | {"PKGS_DIR": PKGS_DIR}
     )
     return proc.stdout.strip().splitlines()
 
 
-def select_one(items: list[str], header: str, preview: str = "") -> str | None:
+def select_one(
+    items: list[str], header: str, preview: str = "", footer: str = "", bind: str = ""
+) -> str | None:
     result = select(items, header, preview=preview, multi=False)
     return result[0] if result else None
+
 
 def group_prompt(name: str, members: list[str]) -> list[str]:
     return select(
@@ -41,6 +56,7 @@ def group_prompt(name: str, members: list[str]) -> list[str]:
         preview="package.sh",
         all=True,
     )
+
 
 def provider_prompt(name: str, providers: list[str]) -> str:
     return select_one(providers, f"Select provider for {name}", preview="package.sh")

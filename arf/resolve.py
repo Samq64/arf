@@ -1,6 +1,6 @@
 import re
 import sys
-from arf import fetch, ui
+from arf import fetch
 from arf.alpm import Alpm
 from srcinfo.parse import parse_srcinfo
 
@@ -45,12 +45,12 @@ def get_provider(pkg_name, select_provider):
 def resolve(targets, select_provider, select_group):
     resolved = set()
     resolving = set()
-    pacman_pkgs = set()
     provider_cache = {}
     deps_cache = {}
+    pacman_pkgs = []
     aur_order = []
 
-    def visit(pkg):
+    def visit(pkg, dependency=False):
         pkg = strip_version(pkg)
         if pkg in resolved:
             return
@@ -85,16 +85,16 @@ def resolve(targets, select_provider, select_group):
                 provider_cache[pkg] = provider
 
         for dep in deps_cache.setdefault(provider, fetch_dependencies(provider)):
-            visit(dep)
+            visit(dep, dependency=True)
 
         resolving.remove(pkg)
         resolved.add(pkg)
         if pkg in fetch.package_list():
-            aur_order.append(provider)
+            aur_order.append({"name": provider, "dependency": dependency})
         else:
-            pacman_pkgs.add(provider)
+            pacman_pkgs.append({"name": provider, "dependency": dependency})
 
     for pkg in targets:
         visit(pkg)
 
-    return {"PACMAN": pacman_pkgs, "AUR": aur_order}
+    return {"pacman": pacman_pkgs, "aur": aur_order}
