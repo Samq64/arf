@@ -35,9 +35,10 @@ def install_packages(packages, makepkg_flags="", skip=None):
 
     if pacman:
         subprocess.run([PACMAN_AUTH, "pacman", "-S", "--needed", *pacman_names], check=True)
-        subprocess.run([PACMAN_AUTH, "pacman", "-D", "--asdeps", *pacman_deps], check=True)
+        if pacman_deps:
+            subprocess.run([PACMAN_AUTH, "pacman", "-D", "--asdeps", *pacman_deps], check=True)
     if aur:
-        flags = shlex.split(makepkg_flags)
+        flags = shlex.split(makepkg_flags) if makepkg_flags else None
         for pkg in aur:
             install_aur_package(pkg, flags)
 
