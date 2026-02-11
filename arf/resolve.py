@@ -11,10 +11,7 @@ def strip_version(pkg_name: str) -> str:
     return re.split(r"[<>=]", pkg_name, maxsplit=1)[0]
 
 
-def fetch_dependencies(name):
-    if pkg := alpm.get_sync_package(name):
-        return pkg.depends
-
+def fetch_aur_dependencies(name):
     repo = fetch.get_repo(name)
     with open(repo / ".SRCINFO", "r") as f:
         parsed, _ = parse_srcinfo(f.read())
@@ -61,35 +58,43 @@ def resolve(targets, select_provider, select_group):
             return
 
         resolving.add(pkg)
+        repo_provider = None
 
-        if group_pkgs := alpm.get_group(pkg):
+        if repo_pkg := alpm.get_sync_package(pkg):
+            provider = pkg
+            repo_provider = repo_pkg
+        elif pkg in provider_cache:
+            provider = provider_cache[pkg]
+        elif provider := get_provider(pkg, select_provider):
+            provider_cache[pkg] = provider
+        elif group_pkgs := alpm.get_group(pkg):
             selected = select_group(pkg, group_pkgs)
             for member in selected:
                 visit(member)
             resolving.remove(pkg)
             resolved.add(pkg)
             return
-
-        if alpm.get_sync_package(pkg):
-            provider = pkg
         else:
-            if pkg in provider_cache:
-                provider = provider_cache[pkg]
-            else:
-                provider = get_provider(pkg, select_provider)
-                if not provider:
-                    raise RuntimeError(f"ERROR: Could not satisfy {pkg}")
-                provider_cache[pkg] = provider
+            raise RuntimeError(f"ERROR: Could not satisfy {pkg}")
 
-        for dep in deps_cache.setdefault(provider, fetch_dependencies(provider)):
+        if provider != pkg and repo_provider is None:
+            repo_provider = alpm.get_sync_package(provider)
+
+        if repo_provider:
+            deps = repo_provider.depends
+        else:
+            deps = deps_cache.setdefault(provider, fetch_aur_dependencies(provider))
+
+        for dep in deps:
             visit(dep, dependency=True)
 
         resolving.remove(pkg)
         resolved.add(pkg)
-        if pkg in fetch.package_list():
-            aur_order.append({"name": provider, "dependency": dependency})
-        else:
+
+        if repo_provider:
             pacman_pkgs.append({"name": provider, "dependency": dependency})
+        else:
+            aur_order.append({"name": provider, "dependency": dependency})
 
     for pkg in targets:
         visit(pkg)
