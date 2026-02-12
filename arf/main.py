@@ -24,13 +24,6 @@ def run_pacman(args):
         sys.exit(e.returncode)
 
 
-def print_step(msg, pad=False):
-    formatted = f"{Colors.BOLD}{Colors.BLUE}:: {Colors.RESET}{Colors.BOLD}{msg}{Colors.RESET}"
-    if pad:
-        formatted = f"\n{formatted}\n"
-    print(formatted)
-
-
 def install_aur_package(pkg, flags):
     makepkg_cmd = ["makepkg", "--install"]
     if pkg["dependency"]:
@@ -43,7 +36,7 @@ def install_aur_package(pkg, flags):
 def install_packages(packages, makepkg_flags="", skip=None):
     skip = skip or []
 
-    print_step("Resolving dependencies...")
+    ui.print_step("Resolving dependencies...")
     pacman, aur = resolve(packages, ui.provider_prompt, ui.group_prompt)
     pacman_names = [p["name"] for p in pacman]
     pacman_deps = [p["name"] for p in pacman if p.get("dependency")]
@@ -53,7 +46,7 @@ def install_packages(packages, makepkg_flags="", skip=None):
         return
 
     if pacman:
-        print_step("Installing Pacman packages...")
+        ui.print_step("Installing Pacman packages...")
         run_pacman(["-S", "--needed", *pacman_names])
         if pacman_deps:
             run_pacman(["-Dq", "--asdeps", *pacman_deps])
@@ -61,7 +54,7 @@ def install_packages(packages, makepkg_flags="", skip=None):
         flags = shlex.split(makepkg_flags) if makepkg_flags else None
         total = len(aur)
         for i, pkg in enumerate(aur, start=1):
-            print_step(f"Installing AUR package: {pkg['name']} ({i}/{total})", pad=True)
+            ui.print_step(f"Installing AUR package: {pkg['name']} ({i}/{total})", pad=True)
             install_aur_package(pkg, flags)
 
 
@@ -88,7 +81,7 @@ def cmd_update(args):
         run_pacman(["-Syu"])
     if not args.no_aur:
         updates = []
-        print("Checking for AUR updates...")
+        ui.print_step("Checking for AUR updates...")
         aur_pkgs = package_list()
 
         for pkg in alpm.foreign_packages():

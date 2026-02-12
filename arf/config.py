@@ -21,3 +21,4 @@ class Colors:
     BLUE = "\x1b[34m"
     MAGENTA = "\x1b[35m"
     CYAN = "\x1b[36m"
+    DEFAULT = "\x1b[39m"

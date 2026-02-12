@@ -3,6 +3,13 @@ from arf.config import DEFAULT_FZF_CMD, EDITOR, PREVIEW_SCRIPTS, PKGS_DIR, Color
 from os import environ
 
 
+def print_step(msg, pad=False):
+    formatted = f"{Colors.BOLD}{Colors.BLUE}:: {Colors.DEFAULT}{msg}{Colors.RESET}"
+    if pad:
+        formatted = f"\n{formatted}\n"
+    print(formatted)
+
+
 def select(
     items: list[str],
     header: str,
