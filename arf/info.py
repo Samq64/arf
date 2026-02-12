@@ -3,14 +3,11 @@ import os
 import sys
 import textwrap
 import time
-from arf.config import ARF_CACHE
+from arf.config import ARF_CACHE, Colors
 from arf.fetch import search_rpc
 from datetime import datetime, timedelta
 
 
-RED = "\033[31m"
-BOLD = "\033[1m"
-RESET = "\033[0m"
 CACHE_TTL = timedelta(days=1)
 COLUMNS = int(os.environ.get("FZF_PREVIEW_COLUMNS", "80"))
 
@@ -47,7 +44,7 @@ def cache_is_fresh(path):
 def wrap_print(label, value):
     indent = 18
     label_width = indent - 3
-    print(f"{BOLD}{label:<{label_width}}{RESET} : ", end="")
+    print(f"{Colors.BOLD}{label:<{label_width}}{Colors.RESET} : ", end="")
     print(textwrap.fill(value, width=COLUMNS - indent, subsequent_indent=" " * indent))
 
 
@@ -70,10 +67,10 @@ def write_json(pkg, file):
 
     if data.get("OutOfDate"):
         date = time.strftime("%Y-%m-%d", time.localtime(int(data["OutOfDate"])))
-        data["Version"] += f" {RED}Out-of-date ({date}){RESET}"
+        data["Version"] += f" {Colors.RED}Out-of-date ({date}){Colors.RESET}"
 
     if not data.get("Maintainer"):
-        data["Maintainer"] = f"{RED}Orphan{RESET}"
+        data["Maintainer"] = f"{Colors.RED}Orphan{Colors.RESET}"
 
     filtered = {k: data[k] for k in FIELD_KEYS if data.get(k) is not None}
     INFO_DIR.mkdir(parents=True, exist_ok=True)

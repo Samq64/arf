@@ -1,7 +1,7 @@
 import re
-import sys
 from arf import fetch
 from arf.alpm import Alpm
+from arf.config import Colors
 from srcinfo.parse import parse_srcinfo
 
 alpm = Alpm()
@@ -54,7 +54,7 @@ def resolve(targets, select_provider, select_group):
             return
 
         if pkg in resolving:
-            print(f"WARNING: Dependency cycle detected for {pkg}", file=sys.stderr)
+            print(Colors.YELLOW + f"Dependency cycle detected for {pkg}" + Colors.RESET)
             return
 
         resolving.add(pkg)
@@ -75,7 +75,7 @@ def resolve(targets, select_provider, select_group):
             resolved.add(pkg)
             return
         else:
-            raise RuntimeError(f"ERROR: Could not satisfy {pkg}")
+            raise RuntimeError(f"Failed to satisfy {pkg}")
 
         if provider != pkg and repo_provider is None:
             repo_provider = alpm.get_sync_package(provider)

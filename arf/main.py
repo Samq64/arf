@@ -1,9 +1,10 @@
 import shlex
 import shutil
 import subprocess
+import sys
 from arf import ui
 from arf.alpm import Alpm
-from arf.config import ARF_CACHE, PACMAN_AUTH, PKGS_DIR
+from arf.config import ARF_CACHE, PACMAN_AUTH, PKGS_DIR, Colors
 from arf.fetch import download_package_list, get_repo, package_list
 from arf.resolve import resolve
 from pathlib import Path
@@ -13,8 +14,24 @@ from srcinfo.parse import parse_srcinfo
 alpm = Alpm()
 
 
+def run_pacman(args):
+    cmd = [PACMAN_AUTH, "pacman", *args]
+    try:
+        subprocess.run(cmd, check=True)
+    except KeyboardInterrupt:
+        sys.exit(130)
+    except subprocess.CalledProcessError as e:
+        sys.exit(e.returncode)
+
+
+def print_step(msg, pad=False):
+    formatted = f"{Colors.BOLD}{Colors.BLUE}:: {Colors.RESET}{Colors.BOLD}{msg}{Colors.RESET}"
+    if pad:
+        formatted = f"\n{formatted}\n"
+    print(formatted)
+
+
 def install_aur_package(pkg, flags):
-    print(f"Installing {pkg['name']}...")
     makepkg_cmd = ["makepkg", "--install"]
     if pkg["dependency"]:
         makepkg_cmd.append("--asdeps")
@@ -25,6 +42,8 @@ def install_aur_package(pkg, flags):
 
 def install_packages(packages, makepkg_flags="", skip=None):
     skip = skip or []
+
+    print_step("Resolving dependencies...")
     pacman, aur = resolve(packages, ui.provider_prompt, ui.group_prompt)
     pacman_names = [p["name"] for p in pacman]
     pacman_deps = [p["name"] for p in pacman if p.get("dependency")]
@@ -34,12 +53,15 @@ def install_packages(packages, makepkg_flags="", skip=None):
         return
 
     if pacman:
-        subprocess.run([PACMAN_AUTH, "pacman", "-S", "--needed", *pacman_names], check=True)
+        print_step("Installing Pacman packages...")
+        run_pacman(["-S", "--needed", *pacman_names])
         if pacman_deps:
-            subprocess.run([PACMAN_AUTH, "pacman", "-D", "--asdeps", *pacman_deps], check=True)
+            run_pacman(["-Dq", "--asdeps", *pacman_deps])
     if aur:
         flags = shlex.split(makepkg_flags) if makepkg_flags else None
-        for pkg in aur:
+        total = len(aur)
+        for i, pkg in enumerate(aur, start=1):
+            print_step(f"Installing AUR package: {pkg['name']} ({i}/{total})", pad=True)
             install_aur_package(pkg, flags)
 
 
@@ -57,12 +79,13 @@ def cmd_install(args):
             "Select packages to install",
             preview="package.sh",
         )
-    install_packages(packages, makepkg_flags=args.makepkg_flags)
+    if packages:
+        install_packages(packages, makepkg_flags=args.makepkg_flags)
 
 
 def cmd_update(args):
     if not args.aur_only:
-        subprocess.run([PACMAN_AUTH, "pacman", "-Syu"], check=True)
+        run_pacman(["-Syu"])
     if not args.no_aur:
         updates = []
         print("Checking for AUR updates...")
@@ -72,7 +95,7 @@ def cmd_update(args):
             if pkg.endswith("-debug"):
                 continue
             if pkg not in aur_pkgs:
-                print("Skipping unknown package: ")
+                print(Colors.YELLOW + f"Skipping unknown package: {pkg}" + Colors.RESET)
                 continue
 
             path = get_repo(pkg)
@@ -89,7 +112,8 @@ def cmd_update(args):
             return
 
         selected = ui.select(updates, "Select AUR packages to update", preview="diff.sh", all=True)
-        install_packages(selected, skip=selected)
+        if selected:
+            install_packages(selected, skip=selected)
 
 
 def cmd_remove(args):
@@ -103,13 +127,13 @@ def cmd_remove(args):
             preview="COLUMNS=$FZF_PREVIEW_COLUMNS pacman -Qi",
         )
     if packages:
-        subprocess.run([PACMAN_AUTH, "pacman", "-Rns", *packages], check=True)
+        run_pacman(["-Rns", *packages])
 
 
 def cmd_clean(args):
     orphans = alpm.orphans()
     if orphans:
-        subprocess.run([PACMAN_AUTH, "pacman", "-Rns", *orphans], check=True)
+        run_pacman(["-Rns", *orphans])
 
     if not PKGS_DIR.is_dir():
         return

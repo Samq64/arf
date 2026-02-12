@@ -1,5 +1,5 @@
 import subprocess
-from arf.config import DEFAULT_FZF_CMD, EDITOR, PREVIEW_SCRIPTS, PKGS_DIR
+from arf.config import DEFAULT_FZF_CMD, EDITOR, PREVIEW_SCRIPTS, PKGS_DIR, Colors
 from os import environ
 
 
@@ -10,6 +10,7 @@ def select(
     preview: str = "",
     bind: str = "",
     multi: bool = True,
+    print_selection: bool = True,
     all: bool = False,
 ) -> list[str]:
     if not items:
@@ -39,13 +40,19 @@ def select(
         capture_output=True,
         env=environ | {"PKGS_DIR": PKGS_DIR},
     )
-    return proc.stdout.strip().splitlines()
+
+    selected = proc.stdout.strip().splitlines()
+    if print_selection:
+        if len(selected) > 0:
+            print(f"{Colors.BOLD}Selected:{Colors.RESET}", " ".join(selected))
+        else:
+            print("Selection cancelled")
+    return selected
 
 
-def select_one(
-    items: list[str], header: str, preview: str = "", footer: str = "", bind: str = ""
-) -> str | None:
-    result = select(items, header, preview=preview, multi=False)
+def select_one(*args, **kwargs) -> str | None:
+    kwargs.pop("multi", None)
+    result = select(*args, multi=False, **kwargs)
     return result[0] if result else None
 
 
@@ -67,6 +74,7 @@ def review_prompt(packages):
     selected = select_one(
         packages,
         "Review build scripts",
+        print_selection=False,
         preview="diff.sh",
         footer="Ctrl+e: Edit PKGBUILD",
         bind=f"ctrl-e:execute({preview_cmd})+refresh-preview",

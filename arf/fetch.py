@@ -55,7 +55,7 @@ def get_repo(pkg_name: str) -> Path:
     else:
         PKGS_DIR.mkdir(parents=True, exist_ok=True)
         if pkg_name not in package_list():
-            raise RuntimeError(f"{pkg_name} is not an AUR package.")
+            raise LookupError(f"{pkg_name} is not an AUR package.")
 
         print(f"Cloning {pkg_name}...")
         run(
