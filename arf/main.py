@@ -28,14 +28,11 @@ def run_pacman(args):
     run_command([PACMAN_AUTH, "pacman", *args])
 
 
-def install_aur_package(pkg, flags):
-    makepkg_cmd = ["makepkg", "--install"]
-    if pkg["dependency"]:
-        makepkg_cmd.append("--asdeps")
-    if flags:
-        makepkg_cmd += flags
-    repo = get_repo(pkg["name"])
-    run_command(makepkg_cmd, cwd=repo)
+def get_pkg_archives(repo):
+    proc = subprocess.run(
+        ["makepkg", "--packagelist"], text=True, capture_output=True, cwd=str(repo)
+    )
+    return proc.stdout.strip().splitlines()
 
 
 def install_packages(packages, makepkg_flags="", skip=None):
@@ -57,11 +54,21 @@ def install_packages(packages, makepkg_flags="", skip=None):
         if pacman_deps:
             run_pacman(["-Dq", "--asdeps", *pacman_deps])
     if aur:
+        batch_install = []
         flags = shlex.split(makepkg_flags) if makepkg_flags else None
         total = len(aur)
         for i, pkg in enumerate(aur, start=1):
             print_step(f"Installing AUR package: {pkg['name']} ({i}/{total})", pad=True)
-            install_aur_package(pkg, flags)
+            repo = get_repo(pkg["name"])
+            makepkg_cmd = ["makepkg"]
+            if flags:
+                makepkg_cmd += flags
+            if pkg["dependency"]:
+                makepkg_cmd += ["--install", "--asdeps"]
+            else:
+                batch_install += get_pkg_archives(repo)
+            run_command(makepkg_cmd, cwd=repo)
+        run_pacman(["-U", *batch_install])
 
 
 def cmd_install(args):
