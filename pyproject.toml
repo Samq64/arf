@@ -22,5 +22,5 @@ arf = "arf.cli:main"
 [tool.setuptools.package-data]
 "arf" = ["previews/*.sh"]
 
-[tool.ruff]
+[tool.black]
 line-length = 100

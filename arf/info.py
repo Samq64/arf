@@ -8,7 +8,6 @@ from arf.fetch import search_rpc, RPCError
 from arf.format import Colors, print_error
 from datetime import datetime, timedelta
 
-
 CACHE_TTL = timedelta(days=1)
 COLUMNS = int(os.environ.get("FZF_PREVIEW_COLUMNS", "80"))
 
