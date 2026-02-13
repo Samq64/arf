@@ -4,7 +4,7 @@ import subprocess
 import sys
 from arf import ui
 from arf.alpm import Alpm
-from arf.config import ARF_CACHE, PACMAN_AUTH, PKGS_DIR
+from arf.config import ARF_CACHE, EXCLUDE_PACKAGE_PATTERN, PACMAN_AUTH, PKGS_DIR
 from arf.fetch import download_package_list, get_repo, package_list
 from arf.format import print_step, print_error, print_warning
 from arf.resolve import resolve
@@ -32,7 +32,8 @@ def get_pkg_archives(repo):
     proc = subprocess.run(
         ["makepkg", "--packagelist"], text=True, capture_output=True, cwd=str(repo)
     )
-    return proc.stdout.strip().splitlines()
+    packages = proc.stdout.strip().splitlines()
+    return [pkg for pkg in packages if not EXCLUDE_PACKAGE_PATTERN.match(pkg)]
 
 
 def install_packages(packages, makepkg_flags="", skip=None):

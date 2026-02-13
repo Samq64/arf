@@ -1,4 +1,5 @@
 from os import environ
+import re
 from importlib.resources import files
 from pathlib import Path
 
@@ -8,6 +9,7 @@ EDITOR = environ.get("EDITOR", "nano")
 PACMAN_AUTH = environ.get("PACMAN_AUTH", "sudo")
 DEFAULT_FZF_CMD = ["fzf", "--reverse", "--header-first", "--preview-window=75%"]
 PREVIEW_SCRIPTS = files("arf").joinpath("previews")
+EXCLUDE_PACKAGE_PATTERN = re.compile(r".*-debug-.*-any\.pkg\.tar\.zst")
 
 
 class Colors:
