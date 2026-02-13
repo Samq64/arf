@@ -66,7 +66,7 @@ def group_prompt(name: str, members: list[str]) -> list[str]:
     )
 
 
-def provider_prompt(name: str, providers: list[str]) -> str:
+def provider_prompt(name: str, providers: list[str]) -> str | None:
     return select_one(providers, f"Select provider for {name}", preview="package.sh")
 
 

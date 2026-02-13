@@ -3,6 +3,7 @@ from arf import fetch
 from arf.alpm import Alpm
 from arf.format import print_warning
 from srcinfo.parse import parse_srcinfo
+from typing import NamedTuple
 
 
 class PackageResolutionError(Exception):
@@ -16,6 +17,11 @@ class PackageResolutionError(Exception):
         super().__init__(message)
 
 
+class ResolvedPackages(NamedTuple):
+    pacman: list[dict]
+    aur: list[dict]
+
+
 alpm = Alpm()
 
 
@@ -23,7 +29,7 @@ def strip_version(pkg_name: str) -> str:
     return re.split(r"[<>=]", pkg_name, maxsplit=1)[0]
 
 
-def fetch_aur_dependencies(name, parent):
+def fetch_aur_dependencies(name: str, parent: str) -> set[str]:
     repo = fetch.get_repo(name)
 
     with open(repo / ".SRCINFO", "r") as f:
@@ -35,7 +41,7 @@ def fetch_aur_dependencies(name, parent):
         return deps
 
 
-def get_provider(pkg_name, select_provider):
+def get_provider(pkg_name: str, select_provider: callable) -> str | None:
     repo_providers = alpm.get_providers(pkg_name)
     if repo_providers:
         providers = sorted(repo_providers)
@@ -53,7 +59,9 @@ def get_provider(pkg_name, select_provider):
     return select_provider(pkg_name, providers)
 
 
-def resolve(targets, select_provider, select_group):
+def resolve(
+    targets: list[str], select_provider: callable, select_group: callable
+) -> ResolvedPackages:
     resolved = set()
     resolving = set()
     provider_cache = {}
@@ -112,4 +120,4 @@ def resolve(targets, select_provider, select_group):
     for pkg in targets:
         visit(pkg)
 
-    return (pacman_pkgs, aur_order)
+    return ResolvedPackages(pacman=pacman_pkgs, aur=aur_order)

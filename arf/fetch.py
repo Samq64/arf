@@ -30,7 +30,7 @@ def search_rpc(query: str, by: str = "name", type: str = "search") -> list[dict]
         raise RPCError("Unable to search the AUR.") from e
 
 
-def download_package_list(force: bool = False) -> Path | None:
+def download_package_list(force: bool = False) -> Path:
     file_path = Path(ARF_CACHE / "packages.txt")
     if not file_path.exists() or force:
         ARF_CACHE.mkdir(parents=True, exist_ok=True)
@@ -57,7 +57,7 @@ def package_list() -> set[str]:
         return {line.strip() for line in f}
 
 
-def get_repo(pkg_name: str) -> Path | None:
+def get_repo(pkg_name: str) -> Path:
     repo = PKGS_DIR / pkg_name
 
     if pkg_name in _seen_repos:
