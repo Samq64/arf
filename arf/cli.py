@@ -1,5 +1,8 @@
 import sys
 from argparse import ArgumentParser
+from arf.fetch import RepoFetchError, RPCError
+from arf.resolve import PackageResolutionError
+from arf.format import print_error
 from arf.main import (
     cmd_install,
     cmd_update,
@@ -56,7 +59,11 @@ def parse_args():
 
 def main():
     args = parse_args()
-    args.func(args)
+    try:
+        args.func(args)
+    except (RepoFetchError, RPCError, PackageResolutionError) as e:
+        print_error(str(e))
+        sys.exit(1)
 
 
 if __name__ == "__main__":

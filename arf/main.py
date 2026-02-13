@@ -4,8 +4,9 @@ import subprocess
 import sys
 from arf import ui
 from arf.alpm import Alpm
-from arf.config import ARF_CACHE, PACMAN_AUTH, PKGS_DIR, Colors
+from arf.config import ARF_CACHE, PACMAN_AUTH, PKGS_DIR
 from arf.fetch import download_package_list, get_repo, package_list
+from arf.format import print_step, print_warning
 from arf.resolve import resolve
 from pathlib import Path
 from pyalpm import vercmp
@@ -14,14 +15,17 @@ from srcinfo.parse import parse_srcinfo
 alpm = Alpm()
 
 
-def run_pacman(args):
-    cmd = [PACMAN_AUTH, "pacman", *args]
+def run_command(cmd, cwd=None):
     try:
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, cwd=cwd, check=True)
     except KeyboardInterrupt:
         sys.exit(130)
     except subprocess.CalledProcessError as e:
         sys.exit(e.returncode)
+
+
+def run_pacman(args):
+    run_command([PACMAN_AUTH, "pacman", *args])
 
 
 def install_aur_package(pkg, flags):
@@ -30,14 +34,16 @@ def install_aur_package(pkg, flags):
         makepkg_cmd.append("--asdeps")
     if flags:
         makepkg_cmd += flags
-    subprocess.run(makepkg_cmd, cwd=get_repo(pkg["name"]), check=True)
+    repo = get_repo(pkg["name"])
+    run_command(makepkg_cmd, cwd=repo)
 
 
 def install_packages(packages, makepkg_flags="", skip=None):
     skip = skip or []
 
-    ui.print_step("Resolving dependencies...")
+    print_step("Resolving dependencies...")
     pacman, aur = resolve(packages, ui.provider_prompt, ui.group_prompt)
+
     pacman_names = [p["name"] for p in pacman]
     pacman_deps = [p["name"] for p in pacman if p.get("dependency")]
     needs_review = sorted(p["name"] for p in aur if p["name"] not in skip)
@@ -46,7 +52,7 @@ def install_packages(packages, makepkg_flags="", skip=None):
         return
 
     if pacman:
-        ui.print_step("Installing Pacman packages...")
+        print_step("Installing Pacman packages...")
         run_pacman(["-S", "--needed", *pacman_names])
         if pacman_deps:
             run_pacman(["-Dq", "--asdeps", *pacman_deps])
@@ -54,7 +60,7 @@ def install_packages(packages, makepkg_flags="", skip=None):
         flags = shlex.split(makepkg_flags) if makepkg_flags else None
         total = len(aur)
         for i, pkg in enumerate(aur, start=1):
-            ui.print_step(f"Installing AUR package: {pkg['name']} ({i}/{total})", pad=True)
+            print_step(f"Installing AUR package: {pkg['name']} ({i}/{total})", pad=True)
             install_aur_package(pkg, flags)
 
 
@@ -81,16 +87,15 @@ def cmd_update(args):
         run_pacman(["-Syu"])
     if not args.no_aur:
         updates = []
-        ui.print_step("Checking for AUR updates...")
+        print_step("Checking for AUR updates...")
         aur_pkgs = package_list()
 
         for pkg in alpm.foreign_packages():
             if pkg.endswith("-debug"):
                 continue
             if pkg not in aur_pkgs:
-                print(Colors.YELLOW + f"Skipping unknown package: {pkg}" + Colors.RESET)
+                print_warning(f"Skipping unknown package: {pkg}")
                 continue
-
             path = get_repo(pkg)
             with open(path / ".SRCINFO", "r") as f:
                 srcinfo, _ = parse_srcinfo(f.read())

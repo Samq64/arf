@@ -3,8 +3,9 @@ import os
 import sys
 import textwrap
 import time
-from arf.config import ARF_CACHE, Colors
-from arf.fetch import search_rpc
+from arf.config import ARF_CACHE
+from arf.fetch import search_rpc, RPCError
+from arf.format import Colors, print_error
 from datetime import datetime, timedelta
 
 
@@ -59,8 +60,17 @@ def format_timestamp(ts):
 
 
 def write_json(pkg, file):
-    data = search_rpc(pkg, type="info")[0]
-    data = {k: normalize(v) for k, v in data.items()}
+    try:
+        data = search_rpc(pkg, type="info")
+    except RPCError as e:
+        print_error(e)
+        exit(1)
+
+    if len(data) < 1:
+        print_error(f"No package information found for {pkg}.")
+        exit(1)
+
+    data = {k: normalize(v) for k, v in data[0].items()}
 
     for key in ("FirstSubmitted", "LastModified"):
         data[key] = format_timestamp(data.get(key))

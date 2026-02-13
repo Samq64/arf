@@ -1,8 +1,20 @@
 import re
 from arf import fetch
 from arf.alpm import Alpm
-from arf.config import Colors
+from arf.format import print_warning
 from srcinfo.parse import parse_srcinfo
+
+
+class PackageResolutionError(Exception):
+    def __init__(self, pkg, parent=None):
+        self.pkg = pkg
+        self.parent = parent
+        if parent:
+            message = f"Failed to satisfy {pkg} required by {parent}"
+        else:
+            message = f"Package not found: {pkg}"
+        super().__init__(message)
+
 
 alpm = Alpm()
 
@@ -11,8 +23,9 @@ def strip_version(pkg_name: str) -> str:
     return re.split(r"[<>=]", pkg_name, maxsplit=1)[0]
 
 
-def fetch_aur_dependencies(name):
+def fetch_aur_dependencies(name, parent):
     repo = fetch.get_repo(name)
+
     with open(repo / ".SRCINFO", "r") as f:
         parsed, _ = parse_srcinfo(f.read())
         deps = set(parsed.get("depends", []) + parsed.get("makedepends", []))
@@ -48,13 +61,13 @@ def resolve(targets, select_provider, select_group):
     pacman_pkgs = []
     aur_order = []
 
-    def visit(pkg, dependency=False):
+    def visit(pkg, parent=None):
         pkg = strip_version(pkg)
-        if dependency and alpm.is_installed(pkg) or pkg in resolved:
+        if parent and alpm.is_installed(pkg) or pkg in resolved:
             return
 
         if pkg in resolving:
-            print(Colors.YELLOW + f"Dependency cycle detected for {pkg}" + Colors.RESET)
+            print_warning(f"Dependency cycle detected for {pkg}")
             return
 
         resolving.add(pkg)
@@ -75,7 +88,7 @@ def resolve(targets, select_provider, select_group):
             resolved.add(pkg)
             return
         else:
-            raise RuntimeError(f"Failed to satisfy {pkg}")
+            raise PackageResolutionError(pkg, parent)
 
         if provider != pkg and repo_provider is None:
             repo_provider = alpm.get_sync_package(provider)
@@ -83,18 +96,18 @@ def resolve(targets, select_provider, select_group):
         if repo_provider:
             deps = repo_provider.depends
         else:
-            deps = deps_cache.setdefault(provider, fetch_aur_dependencies(provider))
+            deps = deps_cache.setdefault(provider, fetch_aur_dependencies(provider, pkg))
 
         for dep in deps:
-            visit(dep, dependency=True)
+            visit(dep, parent=pkg)
 
         resolving.remove(pkg)
         resolved.add(pkg)
 
         if repo_provider:
-            pacman_pkgs.append({"name": provider, "dependency": dependency})
+            pacman_pkgs.append({"name": provider, "dependency": parent is not None})
         else:
-            aur_order.append({"name": provider, "dependency": dependency})
+            aur_order.append({"name": provider, "dependency": parent is not None})
 
     for pkg in targets:
         visit(pkg)

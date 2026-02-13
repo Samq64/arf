@@ -1,13 +1,7 @@
 import subprocess
-from arf.config import DEFAULT_FZF_CMD, EDITOR, PREVIEW_SCRIPTS, PKGS_DIR, Colors
+from arf.config import DEFAULT_FZF_CMD, EDITOR, PKGS_DIR, PREVIEW_SCRIPTS
+from arf.format import Colors
 from os import environ
-
-
-def print_step(msg, pad=False):
-    formatted = f"{Colors.BOLD}{Colors.BLUE}:: {Colors.DEFAULT}{msg}{Colors.RESET}"
-    if pad:
-        formatted = f"\n{formatted}\n"
-    print(formatted)
 
 
 def select(
