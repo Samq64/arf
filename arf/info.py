@@ -62,7 +62,7 @@ def write_json(pkg, file):
     try:
         data = search_rpc(pkg, type="info")
     except RPCError as e:
-        print_error(e)
+        print_error(str(e))
         exit(1)
 
     if len(data) < 1:

@@ -29,7 +29,7 @@ def strip_version(pkg_name: str) -> str:
     return re.split(r"[<>=]", pkg_name, maxsplit=1)[0]
 
 
-def fetch_aur_dependencies(name: str, parent: str) -> set[str]:
+def fetch_aur_dependencies(name: str) -> set[str]:
     repo = fetch.get_repo(name)
 
     with open(repo / ".SRCINFO", "r") as f:
@@ -104,7 +104,7 @@ def resolve(
         if repo_provider:
             deps = repo_provider.depends
         else:
-            deps = deps_cache.setdefault(provider, fetch_aur_dependencies(provider, pkg))
+            deps = deps_cache.setdefault(provider, fetch_aur_dependencies(provider))
 
         for dep in deps:
             visit(dep, parent=pkg)

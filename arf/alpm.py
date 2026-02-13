@@ -49,11 +49,11 @@ class Alpm:
                 return {pkg.name for pkg in packages}
         return None
 
-    def get_sync_package(self, name: str) -> pyalpm.Package | None:
+    def get_sync_package(self, name: str):
         for db in self.syncdbs:
             if pkg := db.get_pkg(name):
                 return pkg
         return None
 
-    def get_local_package(self, name: str) -> pyalpm.Package | None:
+    def get_local_package(self, name: str):
         return self.localdb.get_pkg(name)
