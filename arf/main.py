@@ -131,17 +131,20 @@ def cmd_remove(args):
 def cmd_clean(args):
     orphans = alpm.orphans()
     if orphans:
+        print_step("Removing orphaned packages...")
         run_pacman(["-Rns", *orphans])
 
     if not PKGS_DIR.is_dir():
         return
 
+    print_step("Cleaning Arf's cache...")
+
     foreign = alpm.foreign_packages()
     for subdir in PKGS_DIR.iterdir():
         name = subdir.name
         if name not in foreign:
-            print(f"Removing PKGBUILD directory for {name}")
             shutil.rmtree(subdir)
+            print(f" Removed PKGBUILD directory for {name}")
 
 
 def cmd_sync(args):
