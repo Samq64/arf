@@ -56,19 +56,16 @@ def install_packages(packages, makepkg_flags="", skip=None):
             run_pacman(["-Dq", "--asdeps", *pacman_deps])
     if aur:
         batch_install = []
-        flags = shlex.split(makepkg_flags) if makepkg_flags else None
+        flags = shlex.split(makepkg_flags) if makepkg_flags else []
         total = len(aur)
         for i, pkg in enumerate(aur, start=1):
             print_step(f"Installing AUR package: {pkg['name']} ({i}/{total})", pad=True)
             repo = get_repo(pkg["name"])
-            makepkg_cmd = ["makepkg"]
-            if flags:
-                makepkg_cmd += flags
             if pkg["dependency"]:
-                makepkg_cmd += ["--install", "--asdeps"]
+                run_command(["makepkg", "--install", "--asdeps", *flags], cwd=repo)
             else:
+                run_command(["makepkg", *flags], cwd=repo)
                 batch_install += get_pkg_archives(repo)
-            run_command(makepkg_cmd, cwd=repo)
         run_pacman(["-U", *batch_install])
 
 
