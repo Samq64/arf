@@ -6,7 +6,7 @@ from arf import ui
 from arf.alpm import Alpm
 from arf.config import ARF_CACHE, PACMAN_AUTH, PKGS_DIR
 from arf.fetch import download_package_list, get_repo, package_list
-from arf.format import print_step, print_warning
+from arf.format import print_step, print_error, print_warning
 from arf.resolve import resolve
 from pathlib import Path
 from pyalpm import vercmp
@@ -143,8 +143,11 @@ def cmd_clean(args):
     for subdir in PKGS_DIR.iterdir():
         name = subdir.name
         if name not in foreign:
-            shutil.rmtree(subdir)
-            print(f" Removed PKGBUILD directory for {name}")
+            try:
+                shutil.rmtree(subdir)
+                print(f" Removed PKGBUILD directory for {name}")
+            except PermissionError as e:
+                print_error(str(e))
 
 
 def cmd_sync(args):
