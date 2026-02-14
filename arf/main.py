@@ -7,7 +7,7 @@ from arf.alpm import Alpm
 from arf.config import ARF_CACHE, EXCLUDE_PACKAGE_PATTERN, PACMAN_AUTH, PKGS_DIR
 from arf.exceptions import SrcinfoParseError
 from arf.fetch import download_package_list, get_repo, package_list
-from arf.format import print_step, print_error, print_warning
+from arf.format import Colors, print_step, print_error, print_warning
 from arf.resolve import Resolver
 from pyalpm import vercmp
 from srcinfo.parse import parse_srcinfo
@@ -71,19 +71,23 @@ def install_packages(packages, makepkg_flags="", skip=None):
 
 
 def cmd_install(args):
-    if args.packages:
-        packages = args.packages
-    else:
+    packages = args.packages
+    if not packages:
         items = []
         if not args.aur_only:
-            items = sorted(alpm.all_sync_packages())
+            items += sorted(alpm.all_sync_packages())
         if not args.no_aur:
-            items += sorted(package_list())
+            aur_packages = sorted(package_list())
+            if items:
+                items += [Colors.DIM + pkg + Colors.RESET for pkg in aur_packages]
+            else:
+                items += aur_packages
         packages = ui.select(
             items,
             "Select packages to install",
             preview="package.sh",
         )
+
     if packages:
         install_packages(packages, makepkg_flags=args.mflags)
 
