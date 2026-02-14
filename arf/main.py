@@ -7,7 +7,7 @@ from arf.alpm import Alpm
 from arf.config import ARF_CACHE, EXCLUDE_PACKAGE_PATTERN, PACMAN_AUTH, PKGS_DIR
 from arf.fetch import download_package_list, get_repo, package_list
 from arf.format import print_step, print_error, print_warning
-from arf.resolve import resolve
+from arf.resolve import Resolver
 from pyalpm import vercmp
 from srcinfo.parse import parse_srcinfo
 
@@ -39,7 +39,8 @@ def install_packages(packages, makepkg_flags="", skip=None):
     skip = skip or []
 
     print_step("Resolving dependencies...")
-    pacman, aur = resolve(packages, ui.provider_prompt, ui.group_prompt)
+    resolver = Resolver(alpm, ui.provider_prompt, ui.group_prompt)
+    pacman, aur = resolver.resolve(packages)
 
     pacman_names = [p["name"] for p in pacman]
     pacman_deps = [p["name"] for p in pacman if p.get("dependency")]
