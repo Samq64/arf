@@ -12,10 +12,11 @@ from arf.main import (
 )
 
 
-def add_aur_group(parser):
+def add_aur_flags(parser):
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-a", "--aur-only", dest="aur_only", action="store_true")
     group.add_argument("-A", "--no-aur", dest="no_aur", action="store_true")
+    parser.add_argument("--mflags", help="A string of flags to pass to makepkg")
 
 
 def parse_args():
@@ -28,12 +29,11 @@ def parse_args():
         help="Install packages (default, interactive if none specified)",
     )
     install.add_argument("packages", nargs="*", help="Packages to install (opens fzf if omitted)")
-    add_aur_group(install)
-    install.add_argument("--makepkg-flags", help="A string of flags to pass to makepkg")
+    add_aur_flags(install)
     install.set_defaults(func=cmd_install)
 
     update = subparsers.add_parser("update", aliases=["u"], help="Update system and AUR packages")
-    add_aur_group(update)
+    add_aur_flags(update)
     update.add_argument(
         "-d",
         "--devel",

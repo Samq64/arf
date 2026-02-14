@@ -84,7 +84,7 @@ def cmd_install(args):
             preview="package.sh",
         )
     if packages:
-        install_packages(packages, makepkg_flags=args.makepkg_flags)
+        install_packages(packages, makepkg_flags=args.mflags)
 
 
 def cmd_update(args):
@@ -116,7 +116,7 @@ def cmd_update(args):
 
         selected = ui.select(updates, "Select AUR packages to update", preview="diff.sh", all=True)
         if selected:
-            install_packages(selected, skip=selected)
+            install_packages(selected, skip=selected, makepkg_flags=args.mflags)
 
 
 def cmd_remove(args):
