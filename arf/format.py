@@ -28,3 +28,14 @@ def print_error(message: str):
 
 def print_warning(message: str):
     print(Colors.YELLOW + "Warning: " + Colors.RESET + message, file=sys.stderr)
+
+
+def print_srcinfo_errors(errors):
+    for error in errors:
+        line = error.get("line", "?")
+        raw = error.get("error", "")
+        if isinstance(raw, list):
+            msg = "; ".join(raw)
+        else:
+            msg = raw
+        print(f" Line {line}: {msg}")

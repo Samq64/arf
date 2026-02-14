@@ -5,6 +5,7 @@ import sys
 from arf import ui
 from arf.alpm import Alpm
 from arf.config import ARF_CACHE, EXCLUDE_PACKAGE_PATTERN, PACMAN_AUTH, PKGS_DIR
+from arf.exceptions import SrcinfoParseError
 from arf.fetch import download_package_list, get_repo, package_list
 from arf.format import print_step, print_error, print_warning
 from arf.resolve import Resolver
@@ -103,7 +104,9 @@ def cmd_update(args):
                 continue
             path = get_repo(pkg)
             with open(path / ".SRCINFO", "r") as f:
-                srcinfo, _ = parse_srcinfo(f.read())
+                srcinfo, errors = parse_srcinfo(f.read())
+                if errors:
+                    raise SrcinfoParseError(pkg, errors)
 
             installed_version = alpm.get_local_package(pkg).version
             new_version = srcinfo["pkgver"] + "-" + srcinfo["pkgrel"]

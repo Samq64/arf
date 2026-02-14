@@ -1,8 +1,7 @@
 import sys
 from argparse import ArgumentParser
-from arf.fetch import RepoFetchError, RPCError
-from arf.resolve import PackageResolutionError
-from arf.format import print_error
+from arf.exceptions import ArfException, SrcinfoParseError
+from arf.format import print_error, print_srcinfo_errors
 from arf.main import (
     cmd_install,
     cmd_update,
@@ -61,7 +60,13 @@ def main():
     args = parse_args()
     try:
         args.func(args)
-    except (RepoFetchError, RPCError, PackageResolutionError) as e:
+
+    except SrcinfoParseError as e:
+        print_error(str(e))
+        print_srcinfo_errors(e.errors)
+        sys.exit(1)
+
+    except ArfException as e:
         print_error(str(e))
         sys.exit(1)
 

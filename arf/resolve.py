@@ -1,19 +1,9 @@
 import re
 from arf import fetch
+from arf.exceptions import SrcinfoParseError, PackageResolutionError
 from arf.format import print_warning
 from srcinfo.parse import parse_srcinfo
 from typing import NamedTuple
-
-
-class PackageResolutionError(Exception):
-    def __init__(self, pkg, parent=None):
-        self.pkg = pkg
-        self.parent = parent
-        if parent:
-            message = f"Failed to satisfy {pkg} required by {parent}"
-        else:
-            message = f"Package not found: {pkg}"
-        super().__init__(message)
 
 
 class ResolvedPackages(NamedTuple):
@@ -41,7 +31,9 @@ class Resolver:
         repo = fetch.get_repo(name)
 
         with open(repo / ".SRCINFO", "r") as f:
-            parsed, _ = parse_srcinfo(f.read())
+            parsed, errors = parse_srcinfo(f.read())
+            if errors:
+                raise SrcinfoParseError(name, errors)
             deps = set(parsed.get("depends", []) + parsed.get("makedepends", []))
 
             for subpkg in parsed.get("packages", {}).values():

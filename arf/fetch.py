@@ -2,19 +2,12 @@ import gzip
 import requests
 import subprocess
 from arf.config import ARF_CACHE, PKGS_DIR
+from arf.exceptions import RepoFetchError, RPCError
 from functools import cache
 from io import BytesIO
 from pathlib import Path
 
 _seen_repos = set()
-
-
-class RepoFetchError(Exception):
-    pass
-
-
-class RPCError(Exception):
-    pass
 
 
 def search_rpc(query: str, by: str = "name", type: str = "search") -> list[dict]:
