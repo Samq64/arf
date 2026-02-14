@@ -8,7 +8,6 @@ from arf.config import ARF_CACHE, EXCLUDE_PACKAGE_PATTERN, PACMAN_AUTH, PKGS_DIR
 from arf.fetch import download_package_list, get_repo, package_list
 from arf.format import print_step, print_error, print_warning
 from arf.resolve import resolve
-from pathlib import Path
 from pyalpm import vercmp
 from srcinfo.parse import parse_srcinfo
 
@@ -156,5 +155,5 @@ def cmd_clean(args):
 
 
 def cmd_sync(args):
-    shutil.rmtree(Path(ARF_CACHE) / "info", ignore_errors=True)
+    shutil.rmtree(ARF_CACHE / "info", ignore_errors=True)
     download_package_list(force=True)

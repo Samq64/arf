@@ -84,5 +84,5 @@ def get_repo(pkg_name: str) -> Path:
         except subprocess.CalledProcessError as e:
             raise RepoFetchError(f"Could not clone {pkg_name} from the AUR.") from e
 
-        _seen_repos.add(pkg_name)
+    _seen_repos.add(pkg_name)
     return repo
