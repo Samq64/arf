@@ -27,4 +27,4 @@ def print_error(message: str):
 
 
 def print_warning(message: str):
-    print(Colors.RED + "Warning: " + Colors.RESET + message, file=sys.stderr)
+    print(Colors.YELLOW + "Warning: " + Colors.RESET + message, file=sys.stderr)
