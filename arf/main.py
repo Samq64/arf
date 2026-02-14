@@ -123,7 +123,7 @@ def cmd_remove(args):
     if args.packages:
         packages = args.packages
     else:
-        items = sorted(alpm.explicitly_installed())
+        items = sorted(alpm.explicit_not_required())
         packages = ui.select(
             items,
             "Select packages to remove",

@@ -16,9 +16,11 @@ class Alpm:
     def all_sync_packages(self) -> set[str]:
         return {pkg.name for db in self.syncdbs for pkg in db.pkgcache}
 
-    def explicitly_installed(self) -> set[str]:
+    def explicit_not_required(self) -> set[str]:
         return {
-            pkg.name for pkg in self.localdb.pkgcache if pkg.reason == pyalpm.PKG_REASON_EXPLICIT
+            pkg.name
+            for pkg in self.localdb.pkgcache
+            if pkg.reason == pyalpm.PKG_REASON_EXPLICIT and not pkg.compute_requiredby()
         }
 
     def foreign_packages(self) -> set[str]:
