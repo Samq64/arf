@@ -37,7 +37,7 @@ def get_pkg_archives(repo):
     return [pkg for pkg in packages if not EXCLUDE_PACKAGE_PATTERN.match(pkg)]
 
 
-def batch_install(aur_pkgs, asdeps=True, flags=None):
+def aur_batch_install(aur_pkgs, asdeps=True, flags=None):
     built = []
 
     makepkg_cmd = ["makepkg"]
@@ -79,7 +79,7 @@ def install_packages(packages, makepkg_flags=None, skip=None):
         flags = shlex.split(makepkg_flags) if makepkg_flags else []
         for group in aur:
             asdeps = group == aur[-1]
-            batch_install(group, asdeps=asdeps, flags=flags)
+            aur_batch_install(group, asdeps=asdeps, flags=flags)
 
 
 def cmd_install(args):
