@@ -1,4 +1,5 @@
 import pyalpm
+from arf.format import print_warning
 from pycman.config import PacmanConfig
 from re import escape
 
@@ -49,6 +50,7 @@ class Alpm:
             if group := db.read_grp(name):
                 _, packages = group
                 return {pkg.name for pkg in packages}
+        print_warning(f"Group {name} not found.")
         return None
 
     def get_sync_package(self, name: str):

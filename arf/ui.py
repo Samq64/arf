@@ -1,5 +1,6 @@
 import subprocess
 from arf.config import DEFAULT_FZF_CMD, EDITOR, PKGS_DIR, PREVIEW_SCRIPTS
+from arf.format import print_warning
 from arf.format import Colors
 from os import environ
 
@@ -15,6 +16,7 @@ def select(
     all: bool = False,
 ) -> list[str]:
     if not items:
+        print_warning("Nothing available to select.")
         return []
 
     args = DEFAULT_FZF_CMD.copy()
