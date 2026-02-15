@@ -1,3 +1,4 @@
+import itertools
 import shlex
 import shutil
 import subprocess
@@ -22,10 +23,6 @@ def run_command(cmd, cwd=None):
         sys.exit(130)
     except subprocess.CalledProcessError as e:
         sys.exit(e.returncode)
-
-
-def flatten(xss):
-    return [x for xs in xss for x in xs]
 
 
 def run_pacman(args):
@@ -67,7 +64,8 @@ def install_packages(packages, makepkg_flags=None, skip=None):
 
     pacman_names = [p["name"] for p in pacman]
     pacman_deps = [p["name"] for p in pacman if p.get("dependency")]
-    needs_review = sorted([pkg for pkg in flatten(aur) if pkg not in skip])
+    all_aur = list(itertools.chain(*aur))
+    needs_review = [pkg for pkg in all_aur if pkg not in skip]
 
     if needs_review and not ui.review_prompt(needs_review):
         return
@@ -78,9 +76,10 @@ def install_packages(packages, makepkg_flags=None, skip=None):
         if pacman_deps:
             run_pacman(["-Dq", "--asdeps", *pacman_deps])
     if aur:
+        flags = shlex.split(makepkg_flags) if makepkg_flags else []
         for group in aur:
             asdeps = group == aur[-1]
-            batch_install(group, asdeps=asdeps, flags=makepkg_flags)
+            batch_install(group, asdeps=asdeps, flags=flags)
 
 
 def cmd_install(args):
